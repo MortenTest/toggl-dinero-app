@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Toggl → Dinero Invoice (MVP)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Toggl → Dinero Invoice Creator</h1>
+        <p class="subtitle">
+          Fetch Toggl hours and prepare invoice inputs. Local-only, single user.
+        </p>
+      </header>
+
+      <section class="card">
+        <h2>1. Connect to Toggl</h2>
+        <button id="connect-btn">Connect to Toggl</button>
+        <pre id="workspace-info" class="output"></pre>
+      </section>
+
+      <section class="card">
+        <h2>2. Choose date range & client</h2>
+        <div class="form-row">
+          <label for="start-date">Start date</label>
+          <input type="date" id="start-date" />
+        </div>
+        <div class="form-row">
+          <label for="end-date">End date</label>
+          <input type="date" id="end-date" />
+        </div>
+        <div class="form-row">
+          <label for="client-select">Client</label>
+          <select id="client-select">
+            <option value="">-- Load clients --</option>
+          </select>
+          <button id="load-clients-btn" type="button">Load Clients</button>
+        </div>
+        <button id="load-hours-btn" type="button">Load Hours</button>
+        <pre id="summary-raw" class="output small"></pre>
+      </section>
+
+      <section class="card">
+        <h2>3. Summary (Projects & Hours)</h2>
+        <table id="summary-table">
+          <thead>
+            <tr>
+              <th>Project Name</th>
+              <th>Hours</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+  </html>
+
