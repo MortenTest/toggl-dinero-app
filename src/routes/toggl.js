@@ -89,10 +89,16 @@ router.get('/workspace', async (req, res) => {
       name: me.fullname || me.name || null
     });
   } catch (err) {
-    console.error('Error fetching Toggl workspace', err.response?.data || err);
-    res
-      .status(500)
-      .json({ error: 'Failed to fetch Toggl workspace information.' });
+    const status = err.response?.status;
+    const detail = err.response?.data;
+    console.error('Error fetching Toggl workspace', status, detail || err.message);
+    const message =
+      status === 401
+        ? 'Invalid or missing Toggl API token. Check TOGGL_API_TOKEN.'
+        : status === 403
+          ? 'Toggl API access forbidden. Token may be invalid or expired.'
+          : 'Failed to fetch Toggl workspace information.';
+    res.status(status && status >= 400 ? status : 500).json({ error: message });
   }
 });
 
@@ -132,6 +138,20 @@ router.post('/summary', async (req, res) => {
     }
 
     const { workspaceId } = await ensureWorkspaceId();
+
+    const projectsRes = await axios.get(
+      `https://api.track.toggl.com/api/v9/workspaces/${workspaceId}/projects`,
+      {
+        headers: {
+          Authorization: getAuthHeader()
+        }
+      }
+    );
+    const projects = projectsRes.data || [];
+    const projectMap = {};
+    projects.forEach((p) => {
+      if (p.id != null) projectMap[p.id] = p.name || null;
+    });
 
     const body = {
       start_date: startDate,
@@ -176,10 +196,7 @@ router.post('/summary', async (req, res) => {
         (sg.group && (sg.group.id || sg.group.project_id)) ||
         sg.project_id ||
         sg.id;
-      const projectName =
-        (sg.group && (sg.group.name || sg.group.project_name)) ||
-        sg.project_name ||
-        sg.name;
+      const projectName = projectMap[projectId] || null;
 
       const seconds =
         (sg.summary && (sg.summary.seconds || sg.summary.tracked_seconds)) ||
