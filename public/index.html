@@ -2,61 +2,202 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Toggl → Dinero Invoice (MVP)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Toggl → Dinero Invoice Creator</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div class="container">
-      <header>
-        <h1>Toggl → Dinero Invoice Creator</h1>
-        <p class="subtitle">
-          Fetch Toggl hours and prepare invoice inputs. Local-only, single user.
-        </p>
-      </header>
+    <header class="page-header">
+      <h1>Toggl → Dinero Invoice Creator</h1>
+    </header>
 
-      <section class="card">
-        <h2>1. Connect to Toggl</h2>
-        <button id="connect-btn">Connect to Toggl</button>
-        <pre id="workspace-info" class="output"></pre>
+    <main class="page-main">
+      <!-- SECTION 0 — Setup -->
+      <section class="card" id="section-setup">
+        <div id="setup-collapsed" class="setup-collapsed hidden">
+          <span id="setup-collapsed-text">⚙ Setup complete — 0 clients mapped</span>
+          <span class="setup-edit-hint"> · <a href="#" id="setup-expand-link">click to edit</a></span>
+        </div>
+        <div id="setup-expanded">
+          <h2 class="section-heading">Setup</h2>
+
+          <!-- Block A — Toggl -->
+          <div class="setup-block">
+            <label for="toggl-token">Toggl API Token</label>
+            <input type="password" id="toggl-token" placeholder="Paste your Toggl API token" />
+            <p class="hint">Find your token at toggl.com → Profile → API Token</p>
+            <div class="setup-inline">
+              <button type="button" id="btn-verify-toggl">Verify Connection</button>
+              <span id="toggl-status"></span>
+            </div>
+          </div>
+
+          <!-- Block B — Dinero -->
+          <div class="setup-block">
+            <span id="dinero-setup-status">✗ Not connected — check your .env credentials</span>
+          </div>
+
+          <!-- Block C — Defaults -->
+          <div class="setup-block setup-two-cols">
+            <div>
+              <label for="default-account">Default Account Number</label>
+              <input type="number" id="default-account" placeholder="1000" />
+              <p class="hint">Your Dinero sales revenue account number</p>
+            </div>
+            <div>
+              <label for="default-currency">Default Currency</label>
+              <select id="default-currency">
+                <option value="DKK" selected>DKK</option>
+                <option value="EUR">EUR</option>
+                <option value="USD">USD</option>
+                <option value="GBP">GBP</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Block D — Mapping -->
+          <div class="setup-block">
+            <h3 class="setup-subheading">Map your Toggl clients to Dinero contacts</h3>
+            <p class="hint">Done once. Saved and reused every time.</p>
+            <table class="mapping-table">
+              <thead>
+                <tr>
+                  <th style="width:40%">Toggl Client</th>
+                  <th style="width:10%" class="center">→</th>
+                  <th style="width:50%">Dinero Contact</th>
+                </tr>
+              </thead>
+              <tbody id="mapping-tbody"></tbody>
+            </table>
+          </div>
+
+          <!-- Block E — Save -->
+          <div class="setup-block">
+            <button type="button" id="btn-save-setup" class="btn-full">Save Setup</button>
+            <p id="setup-save-error" class="error-text hidden"></p>
+          </div>
+        </div>
       </section>
 
+      <!-- SECTION 1 — Select Period + Client -->
       <section class="card">
-        <h2>2. Choose date range & client</h2>
-        <div class="form-row">
-          <label for="start-date">Start date</label>
-          <input type="date" id="start-date" />
+        <h2 class="section-heading">Select Period & Client</h2>
+        <div class="form-group">
+          <label>Billing Period</label>
+          <div class="button-group">
+            <button type="button" class="period-btn" data-period="this-month">This month</button>
+            <button type="button" class="period-btn active" data-period="last-month">Last month</button>
+            <button type="button" class="period-btn" data-period="custom">Custom</button>
+          </div>
+          <div id="custom-dates" class="hidden">
+            <input type="date" id="date-from" />
+            <span class="date-sep">–</span>
+            <input type="date" id="date-to" />
+          </div>
         </div>
-        <div class="form-row">
-          <label for="end-date">End date</label>
-          <input type="date" id="end-date" />
+        <div class="form-row-70-30">
+          <div class="form-group">
+            <label for="client-select">Client</label>
+            <select id="client-select">
+              <option value="">— Select client —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>&nbsp;</label>
+            <button type="button" id="btn-load-hours">Load Hours →</button>
+          </div>
         </div>
-        <div class="form-row">
-          <label for="client-select">Client</label>
-          <select id="client-select">
-            <option value="">-- Load clients --</option>
-          </select>
-          <button id="load-clients-btn" type="button">Load Clients</button>
-        </div>
-        <button id="load-hours-btn" type="button">Load Hours</button>
-        <pre id="summary-raw" class="output small"></pre>
       </section>
 
-      <section class="card">
-        <h2>3. Summary (Projects & Hours)</h2>
-        <table id="summary-table">
+      <!-- SECTION 2 — Review Hours -->
+      <section class="card hidden" id="section-review">
+        <div class="review-header">
+          <span id="review-title">Client · start – end</span>
+          <span id="review-total" class="mono">Total tracked: 0.00h</span>
+        </div>
+        <table class="hours-table">
           <thead>
             <tr>
-              <th>Project Name</th>
-              <th>Hours</th>
+              <th style="width:32px"></th>
+              <th>Project</th>
+              <th style="width:80px" class="right">Hours</th>
+              <th style="width:100px" class="right">Rate/hr</th>
+              <th style="width:100px" class="right">Subtotal</th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody id="hours-tbody"></tbody>
         </table>
+        <div class="review-footer">
+          <p id="review-selected" class="review-meta">Selected: 0 projects · 0.00h total</p>
+          <p id="review-subtotal" class="review-total-line mono">Subtotal excl. VAT: 0.00 DKK</p>
+        </div>
+        <div class="review-actions">
+          <p id="review-continue-error" class="error-text hidden"></p>
+          <button type="button" id="btn-continue" class="btn-primary">Continue to Invoice →</button>
+        </div>
       </section>
-    </div>
+
+      <!-- SECTION 3 — Invoice Details -->
+      <section class="card hidden" id="section-invoice">
+        <h2 class="section-heading">Invoice Details</h2>
+
+        <div class="invoice-fields">
+          <div class="form-row-50">
+            <div class="form-group">
+              <label>Dinero Contact</label>
+              <div id="invoice-contact-display" class="readonly-box"></div>
+              <p class="hint">From your client mapping</p>
+            </div>
+            <div class="form-group">
+              <label for="invoice-date">Invoice Date</label>
+              <input type="date" id="invoice-date" />
+            </div>
+          </div>
+          <div class="form-row-50">
+            <div class="form-group">
+              <label for="invoice-currency">Currency</label>
+              <select id="invoice-currency">
+                <option value="DKK" selected>DKK</option>
+                <option value="EUR">EUR</option>
+                <option value="USD">USD</option>
+                <option value="GBP">GBP</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="invoice-description">Description (optional)</label>
+              <input type="text" id="invoice-description" placeholder="e.g. Consulting services January 2026" />
+            </div>
+          </div>
+        </div>
+
+        <div class="invoice-lines-block">
+          <h3 class="section-heading">Invoice Lines</h3>
+          <table class="invoice-lines-table">
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th class="right">Hours</th>
+                <th class="right">Rate</th>
+                <th class="right">Total</th>
+              </tr>
+            </thead>
+            <tbody id="invoice-lines-tbody"></tbody>
+            <tfoot>
+              <tr class="total-row">
+                <td colspan="3">Total excl. VAT</td>
+                <td id="invoice-total-cell" class="right mono"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="invoice-create-block">
+          <button type="button" id="btn-create-invoice" class="btn-create">Create Draft in Dinero</button>
+          <div id="invoice-result" class="hidden"></div>
+        </div>
+      </section>
+    </main>
 
     <script src="app.js"></script>
   </body>
-  </html>
-
+</html>

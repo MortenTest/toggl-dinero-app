@@ -6,6 +6,7 @@ dotenv.config();
 
 const togglRouter = require('./routes/toggl');
 const configRouter = require('./routes/config');
+const dineroRouter = require('./routes/dinero');
 
 const app = express();
 
@@ -17,6 +18,7 @@ const publicDir = path.join(__dirname, '..', 'public');
 app.use(express.static(publicDir));
 
 app.use('/api/toggl', togglRouter);
+app.use('/api/dinero', dineroRouter);
 app.use('/api', configRouter);
 
 app.use((err, req, res, next) => {
